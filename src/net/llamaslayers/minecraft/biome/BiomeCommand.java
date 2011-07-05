@@ -61,16 +61,10 @@ public class BiomeCommand implements CommandExecutor {
 			if (args.length != 1)
 				return false;
 
-			if (BiomePlugin.getBiomeForChunk(player.getWorld().getName(),
-					player.getLocation().getBlockX() / 16, player.getLocation()
-							.getBlockZ() / 16) == null) {
-				sender.sendMessage("The chunk you are standing in does not have a biome set.");
-			} else {
-				BiomePlugin.clearBiomeForChunk(player.getWorld().getName(),
-						player.getLocation().getBlockX() / 16, player
-								.getLocation().getBlockZ() / 16);
-				sender.sendMessage("Set this chunk to use its natural biomes.");
-			}
+			BiomePlugin.clearBiomeForChunk(player.getWorld().getName(), player
+					.getLocation().getBlockX() / 16, player.getLocation()
+					.getBlockZ() / 16);
+			sender.sendMessage("Set this chunk to use its natural biomes.");
 			return true;
 		} else if (args[0].equals("list")) {
 			if (args.length != 1)
@@ -87,6 +81,51 @@ public class BiomeCommand implements CommandExecutor {
 						name.substring(1));
 			}
 			sender.sendMessage(sb.toString());
+			return true;
+		} else if (args[0].equals("set-selection")) {
+			if (args.length < 2)
+				return false;
+
+			StringBuilder sb = new StringBuilder(args[1].toUpperCase());
+			for (int i = 2; i < args.length; i++) {
+				sb.append('_').append(args[i].toUpperCase());
+			}
+
+			try {
+				Biome biome = Biome.valueOf(sb.toString());
+				if (BiomePlugin.getWorldEdit() == null) {
+					sender.sendMessage("This server does not have the WorldEdit plugin installed.");
+					return true;
+				}
+				BiomePlugin.setBiomeForRegion(player.getWorld().getName(),
+						BiomePlugin.getWorldEdit().getSelection(player)
+								.getRegionSelector().getRegion(), biome);
+				sender.sendMessage("Set your selection's biome to "
+						+ sb.charAt(0)
+						+ sb.substring(1).toLowerCase().replace('_', ' '));
+			} catch (IllegalArgumentException ex) {
+				sender.sendMessage("Unknown biome.");
+			} catch (Exception ex) {
+				sender.sendMessage("You have not defined a selection in WorldEdit.");
+			}
+			return true;
+		} else if (args[0].equals("clear-selection")) {
+			if (args.length != 1)
+				return false;
+
+			if (BiomePlugin.getWorldEdit() == null) {
+				sender.sendMessage("This server does not have the WorldEdit plugin installed.");
+				return true;
+			}
+
+			try {
+				BiomePlugin.clearBiomeForRegion(player.getWorld().getName(),
+						BiomePlugin.getWorldEdit().getSelection(player)
+								.getRegionSelector().getRegion());
+				sender.sendMessage("Set your selection to use its natural biomes.");
+			} catch (Exception ex) {
+				sender.sendMessage("You have not defined a selection in WorldEdit.");
+			}
 			return true;
 		}
 

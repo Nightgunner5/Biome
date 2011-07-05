@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import net.minecraft.server.BiomeBase;
-import net.minecraft.server.ChunkCoordIntPair;
 
 import org.bukkit.World;
 import org.bukkit.block.Biome;
@@ -19,12 +18,16 @@ import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.event.Event;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.event.world.WorldListener;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.regions.Region;
+
 public class BiomePlugin extends JavaPlugin {
 	private static BiomePlugin instance = null;
-	private static Map<String, Map<Integer, Biome>> cache = new HashMap<String, Map<Integer, Biome>>();
+	private static Map<String, Map<LocationSet, Biome>> cache = new HashMap<String, Map<LocationSet, Biome>>();
 
 	@Override
 	public void onDisable() {
@@ -54,40 +57,107 @@ public class BiomePlugin extends JavaPlugin {
 	}
 
 	public static void setBiomeForChunk(String world, int x, int z, Biome biome) {
-		if (getBiomeForChunk(world, x, z) != biome) {
-			if (biome != null) {
-				cache.get(world).put(ChunkCoordIntPair.a(x, z), biome);
-			} else {
-				cache.get(world).remove(ChunkCoordIntPair.a(x, z));
+		getBiomeForLocation(world, 0, 0); // Load world into cache
+		LocationSet chunk = new LocationSet(x, z);
+		for (LocationSet locations : cache.get(world).keySet()) {
+			boolean dirty = false;
+			for (int _x = x << 4; _x < x << 16 + 16; _x++) {
+				for (int _z = z << 4; _z < z << 16 + 16; _z++) {
+					if (locations.in(_x, _z)) {
+						dirty = true;
+					}
+				}
 			}
-			instance.getDataFolder().mkdirs();
-			try {
-				ObjectOutputStream out = new ObjectOutputStream(
-						new FileOutputStream(new File(instance.getDataFolder(),
-								world + ".dat")));
-				out.writeObject(cache.get(world));
-				out.flush();
-				out.close();
-			} catch (IOException ex) {
+			if (dirty) {
+				Biome _biome = cache.get(world).get(locations);
+				LocationSet newLocations = locations.remove(chunk);
+				cache.get(world).remove(locations);
+				if (!newLocations.isEmpty()) {
+					cache.get(world).put(newLocations, _biome);
+				}
 			}
 		}
+		if (biome != null) {
+			cache.get(world).put(chunk, biome);
+		}
+		saveBiomeCache(world);
 	}
 
 	public static void clearBiomeForChunk(String world, int x, int z) {
 		setBiomeForChunk(world, x, z, null);
 	}
 
+	public static void setBiomeForRegion(String world, Region region,
+			Biome biome) {
+		getBiomeForLocation(world, 0, 0); // Load world into cache
+		LocationSet chunk = new LocationSet(region);
+		for (LocationSet locations : cache.get(world).keySet()) {
+			Biome _biome = cache.get(world).get(locations);
+			LocationSet newLocations = locations.remove(chunk);
+			if (!newLocations.equals(locations)) {
+				cache.get(world).remove(locations);
+				if (!newLocations.isEmpty()) {
+					cache.get(world).put(newLocations, _biome);
+				}
+			}
+		}
+		if (biome != null) {
+			cache.get(world).put(chunk, biome);
+		}
+		saveBiomeCache(world);
+	}
+
+	public static void clearBiomeForRegion(String world, Region region) {
+		setBiomeForRegion(world, region, null);
+	}
+
+	private static void saveBiomeCache(String world) {
+		instance.getDataFolder().mkdirs();
+		try {
+			ObjectOutputStream out = new ObjectOutputStream(
+					new FileOutputStream(new File(instance.getDataFolder(),
+							world + ".dat")));
+			out.writeObject(cache.get(world));
+			out.flush();
+			out.close();
+		} catch (IOException ex) {
+		}
+	}
+
 	@SuppressWarnings("unchecked")
-	public static Biome getBiomeForChunk(String world, int x, int z) {
+	public static Biome getBiomeForLocation(String world, int x, int z) {
 		if (!cache.containsKey(world)) {
-			cache.put(world, new HashMap<Integer, Biome>());
+			cache.put(world, new HashMap<LocationSet, Biome>());
 
 			try {
 				ObjectInputStream in = new ObjectInputStream(
 						new FileInputStream(new File(instance.getDataFolder(),
 								world + ".dat")));
-				cache.get(world).putAll((Map<Integer, Biome>) in.readObject());
+				@SuppressWarnings("rawtypes")
+				Map worldData = (Map) in.readObject();
+				Map<LocationSet, Biome> data;
 				in.close();
+				if (worldData.isEmpty())
+					return null;
+				if (worldData.keySet().iterator().next() instanceof Integer) {
+					// Convert v0.1 data
+					data = new HashMap<LocationSet, Biome>();
+					for (Object _chunkID : worldData.keySet()) {
+						int chunkID = ((Integer) _chunkID).intValue();
+						int chunkX = chunkID >> 16;
+						int chunkZ = chunkID & 0xffff;
+						if ((chunkZ & 0x8000) != 0) {
+							chunkZ ^= 0x8000;
+							chunkZ *= -1;
+						}
+						data.put(new LocationSet(chunkX, chunkZ),
+								(Biome) worldData.get(_chunkID));
+					}
+				} else {
+					data = worldData;
+				}
+
+				cache.get(world).putAll(data);
 			} catch (FileNotFoundException ex) {
 				return null;
 			} catch (IOException ex) {
@@ -97,11 +167,15 @@ public class BiomePlugin extends JavaPlugin {
 			}
 		}
 
-		return cache.get(world).get(ChunkCoordIntPair.a(x, z));
+		for (LocationSet locations : cache.get(world).keySet()) {
+			if (locations.in(x, z))
+				return cache.get(world).get(locations);
+		}
+		return null;
 	}
 
-	public static BiomeBase getBiomeBaseForChunk(String world, int x, int z) {
-		Biome biome = getBiomeForChunk(world, x, z);
+	public static BiomeBase getBiomeBaseForLocation(String world, int x, int z) {
+		Biome biome = getBiomeForLocation(world, x, z);
 		if (biome == null)
 			return null;
 		switch (biome) {
@@ -133,5 +207,17 @@ public class BiomePlugin extends JavaPlugin {
 			return BiomeBase.SKY;
 		}
 		return null;
+	}
+
+	protected static WorldEditPlugin getWorldEdit() {
+		Plugin worldEdit = instance.getServer().getPluginManager()
+				.getPlugin("WorldEdit");
+		if (worldEdit == null)
+			return null;
+
+		if (worldEdit instanceof WorldEditPlugin)
+			return (WorldEditPlugin) worldEdit;
+		else
+			return null;
 	}
 }

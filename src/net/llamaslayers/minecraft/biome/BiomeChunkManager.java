@@ -41,8 +41,8 @@ public class BiomeChunkManager extends WorldChunkManager {
 
 		for (int j = 0; j < rx; ++j) {
 			for (int k = 0; k < rz; ++k) {
-				BiomeBase userDefined = BiomePlugin.getBiomeBaseForChunk(world
-						.getWorld().getName(), (x + j) / 16, (z + k) / 16);
+				BiomeBase userDefined = BiomePlugin.getBiomeBaseForLocation(
+						world.getWorld().getName(), (x + j), (z + k));
 				if (userDefined != null) {
 					buffer[i++] = userDefined;
 					continue;
