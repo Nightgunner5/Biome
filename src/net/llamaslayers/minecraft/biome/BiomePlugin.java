@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,7 +15,9 @@ import net.minecraft.server.BiomeBase;
 
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.event.world.WorldListener;
@@ -22,12 +25,15 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.nijiko.permissions.PermissionHandler;
+import com.nijikokun.bukkit.Permissions.Permissions;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.sk89q.worldedit.regions.Region;
 
 public class BiomePlugin extends JavaPlugin {
 	private static BiomePlugin instance = null;
 	private static Map<String, Map<LocationSet, Biome>> cache = new HashMap<String, Map<LocationSet, Biome>>();
+	private PermissionHandler permissionHandler;
 
 	@Override
 	public void onDisable() {
@@ -54,6 +60,29 @@ public class BiomePlugin extends JavaPlugin {
 		}, Event.Priority.Normal, this);
 		instance = this;
 		getCommand("biome").setExecutor(new BiomeCommand());
+
+		if (getConfiguration().getKeys("gobal_biomes") == null) {
+			getConfiguration().setHeader("# Allowed biomes in this config:",
+					"# " + Arrays.toString(Biome.values()), "");
+			for (World world : getServer().getWorlds()) {
+				getConfiguration().setProperty(
+						"global_biomes." + world.getName(), "auto");
+			}
+			getConfiguration().save();
+		}
+	}
+
+	private void setupPermissions() {
+		if (permissionHandler != null)
+			return;
+
+		Plugin permissionsPlugin = getServer().getPluginManager().getPlugin(
+				"Permissions");
+
+		if (permissionsPlugin == null)
+			return;
+
+		permissionHandler = ((Permissions) permissionsPlugin).getHandler();
 	}
 
 	public static void setBiomeForChunk(String world, int x, int z, Biome biome) {
@@ -171,7 +200,12 @@ public class BiomePlugin extends JavaPlugin {
 			if (locations.in(x, z))
 				return cache.get(world).get(locations);
 		}
-		return null;
+		try {
+			return Biome.valueOf(instance.getConfiguration().getString(
+					"gobal_biomes." + world, "auto"));
+		} catch (IllegalArgumentException ex) {
+			return null;
+		}
 	}
 
 	public static BiomeBase getBiomeBaseForLocation(String world, int x, int z) {
@@ -219,5 +253,23 @@ public class BiomePlugin extends JavaPlugin {
 			return (WorldEditPlugin) worldEdit;
 		else
 			return null;
+	}
+
+	protected static boolean hasPermissionTo(CommandSender sender,
+			BiomePermission permission) {
+		instance.setupPermissions();
+		if (sender.isOp())
+			return true;
+
+		if (!(sender instanceof Player))
+			return false;
+
+		Player player = (Player) sender;
+
+		if (instance.permissionHandler == null)
+			return false;
+
+		return instance.permissionHandler.has(player, "biome."
+				+ permission.name().toLowerCase().replace('_', '.'));
 	}
 }

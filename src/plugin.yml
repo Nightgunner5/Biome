@@ -1,6 +1,6 @@
 name: Biome
 main: net.llamaslayers.minecraft.biome.BiomePlugin
-version: 0.2
+version: 0.3
 description: Change biomes on a chunk-by-chunk basis.
 load: startup
 commands:

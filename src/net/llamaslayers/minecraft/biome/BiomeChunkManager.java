@@ -8,6 +8,8 @@ import net.minecraft.server.NoiseGeneratorOctaves2;
 import net.minecraft.server.World;
 import net.minecraft.server.WorldChunkManager;
 
+import org.bukkit.World.Environment;
+
 public class BiomeChunkManager extends WorldChunkManager {
 	private final World world;
 	private final NoiseGeneratorOctaves2 randTemperature;
@@ -38,6 +40,7 @@ public class BiomeChunkManager extends WorldChunkManager {
 		rain = randRain.a(rain, x, z, rx, rx, 0.05, 0.05, 1.0 / 3.0);
 		c = randRand.a(c, x, z, rx, rx, 0.25, 0.25, 10.0 / 17.0);
 		int i = 0;
+		Environment environment = world.getWorld().getEnvironment();
 
 		for (int j = 0; j < rx; ++j) {
 			for (int k = 0; k < rz; ++k) {
@@ -45,6 +48,15 @@ public class BiomeChunkManager extends WorldChunkManager {
 						world.getWorld().getName(), (x + j), (z + k));
 				if (userDefined != null) {
 					buffer[i++] = userDefined;
+					continue;
+				}
+
+				if (environment == Environment.NETHER) {
+					buffer[i++] = BiomeBase.HELL;
+					continue;
+				}
+				if (environment == Environment.SKYLANDS) {
+					buffer[i++] = BiomeBase.SKY;
 					continue;
 				}
 

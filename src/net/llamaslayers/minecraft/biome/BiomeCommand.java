@@ -13,9 +13,6 @@ public class BiomeCommand implements CommandExecutor {
 	@Override
 	public boolean onCommand(CommandSender sender, Command command,
 			String label, String[] args) {
-		if (!sender.isOp())
-			return true;
-
 		if (!(sender instanceof Player)) {
 			sender.sendMessage("This command can only be used by players.");
 			return true;
@@ -28,6 +25,9 @@ public class BiomeCommand implements CommandExecutor {
 		if (args[0].equals("get")) {
 			if (args.length != 1)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player, BiomePermission.GET))
+				return true;
+
 			CraftWorld world = (CraftWorld) player.getWorld();
 			World innerWorld = world.getHandle();
 			String biomeName = innerWorld.worldProvider.b.getBiome(player
@@ -40,6 +40,8 @@ public class BiomeCommand implements CommandExecutor {
 		} else if (args[0].equals("set")) {
 			if (args.length < 2)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player, BiomePermission.SET_CHUNK))
+				return true;
 
 			StringBuilder sb = new StringBuilder(args[1].toUpperCase());
 			for (int i = 2; i < args.length; i++) {
@@ -60,6 +62,9 @@ public class BiomeCommand implements CommandExecutor {
 		} else if (args[0].equals("clear")) {
 			if (args.length != 1)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player,
+					BiomePermission.CLEAR_CHUNK))
+				return true;
 
 			BiomePlugin.clearBiomeForChunk(player.getWorld().getName(), player
 					.getLocation().getBlockX() / 16, player.getLocation()
@@ -69,6 +74,9 @@ public class BiomeCommand implements CommandExecutor {
 		} else if (args[0].equals("list")) {
 			if (args.length != 1)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player, BiomePermission.LIST))
+				return true;
+
 			StringBuilder sb = new StringBuilder("Biomes: ");
 			boolean first = true;
 			for (Biome biome : Biome.values()) {
@@ -85,6 +93,9 @@ public class BiomeCommand implements CommandExecutor {
 		} else if (args[0].equals("set-selection")) {
 			if (args.length < 2)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player,
+					BiomePermission.SET_SELECTION))
+				return true;
 
 			StringBuilder sb = new StringBuilder(args[1].toUpperCase());
 			for (int i = 2; i < args.length; i++) {
@@ -112,6 +123,9 @@ public class BiomeCommand implements CommandExecutor {
 		} else if (args[0].equals("clear-selection")) {
 			if (args.length != 1)
 				return false;
+			if (!BiomePlugin.hasPermissionTo(player,
+					BiomePermission.CLEAR_SELECTION))
+				return true;
 
 			if (BiomePlugin.getWorldEdit() == null) {
 				sender.sendMessage("This server does not have the WorldEdit plugin installed.");
