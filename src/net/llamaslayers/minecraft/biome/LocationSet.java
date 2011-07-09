@@ -7,13 +7,17 @@ import org.bukkit.Location;
 
 import com.sk89q.worldedit.BlockVector;
 import com.sk89q.worldedit.regions.Region;
+import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 
 // Values must be stored in order of z from smallest to largest, then x from
 // smallest to largest, with no duplicates.
 public class LocationSet implements Serializable {
 	private static final long serialVersionUID = 1L;
+	public static final LocationSet EMPTY = new LocationSet(new int[0],
+			new int[0]);
 	public final int[] x;
 	public final int[] z;
+	public final int length;
 
 	public LocationSet(int chunkX, int chunkZ) {
 		x = new int[256];
@@ -24,6 +28,7 @@ public class LocationSet implements Serializable {
 				z[i + j * 16] = chunkZ * 16 + j;
 			}
 		}
+		length = 256;
 	}
 
 	private LocationSet(int[] _x, int[] _z) {
@@ -62,6 +67,7 @@ public class LocationSet implements Serializable {
 			__x[best] = Integer.MAX_VALUE;
 			__z[best] = Integer.MAX_VALUE;
 		}
+		length = points;
 	}
 
 	public LocationSet(Region region) {
@@ -97,6 +103,49 @@ public class LocationSet implements Serializable {
 			_x[best] = Integer.MAX_VALUE;
 			_z[best] = Integer.MAX_VALUE;
 		}
+		length = points;
+	}
+
+	public LocationSet(ProtectedRegion region) {
+		int[] _x = new int[region.volume()];
+		int[] _z = new int[region.volume()];
+		int points = 0;
+		for (int i = region.getMinimumPoint().getBlockX(); i <= region
+				.getMaximumPoint().getBlockX(); i++) {
+			for (int j = region.getMinimumPoint().getBlockZ(); j <= region
+					.getMaximumPoint().getBlockZ(); j++) {
+				for (int k = region.getMinimumPoint().getBlockY(); k <= region
+						.getMaximumPoint().getBlockY(); k++) {
+					if (region.contains(new BlockVector(i, j, k))) {
+						_x[points] = i;
+						_z[points] = i;
+						points++;
+						break;
+					}
+				}
+			}
+		}
+
+		x = new int[points];
+		z = new int[points];
+
+		for (int i = 0; i < points; i++) {
+			int best = 0;
+			for (int j = 1; j < points; j++) {
+				if (_z[best] > _z[j]) {
+					best = j;
+					continue;
+				}
+				if (_z[best] == _z[j] && _x[best] > _x[j]) {
+					best = j;
+				}
+			}
+			x[i] = _x[best];
+			z[i] = _z[best];
+			_x[best] = Integer.MAX_VALUE;
+			_z[best] = Integer.MAX_VALUE;
+		}
+		length = points;
 	}
 
 	public boolean isEmpty() {
@@ -115,6 +164,24 @@ public class LocationSet implements Serializable {
 		return in(location.getBlockX(), location.getBlockZ());
 	}
 
+	public LocationSet add(LocationSet other) {
+		int[] _x = new int[x.length + other.x.length];
+		int[] _z = new int[z.length + other.z.length];
+
+		for (int i = 0; i < x.length; i++) {
+			_x[i] = x[i];
+			_z[i] = z[i];
+		}
+
+		int start = x.length;
+		for (int i = 0; i < other.x.length; i++) {
+			_x[i + start] = other.x[i];
+			_z[i + start] = other.z[i];
+		}
+
+		return new LocationSet(_x, _z);
+	}
+
 	public LocationSet remove(LocationSet other) {
 		int[] _x = new int[x.length];
 		int[] _z = new int[z.length];
@@ -126,6 +193,22 @@ public class LocationSet implements Serializable {
 			} else {
 				_x[i] = x[i];
 				_z[i] = z[i];
+			}
+		}
+		return new LocationSet(_x, _z);
+	}
+
+	public LocationSet union(LocationSet other) {
+		int[] _x = new int[x.length];
+		int[] _z = new int[z.length];
+
+		for (int i = 0; i < x.length; i++) {
+			if (other.in(x[i], z[i])) {
+				_x[i] = x[i];
+				_z[i] = z[i];
+			} else {
+				_x[i] = Integer.MAX_VALUE;
+				_z[i] = Integer.MAX_VALUE;
 			}
 		}
 		return new LocationSet(_x, _z);

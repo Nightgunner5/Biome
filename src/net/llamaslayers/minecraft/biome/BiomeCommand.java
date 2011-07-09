@@ -62,7 +62,7 @@ public class BiomeCommand implements CommandExecutor {
 				Biome biome = Biome.valueOf(sb.toString());
 				BiomePlugin.setBiomeForChunk(player.getWorld().getName(),
 						player.getLocation().getBlockX() / 16, player
-								.getLocation().getBlockZ() / 16, biome);
+								.getLocation().getBlockZ() / 16, biome, player);
 				sender.sendMessage("Set this chunk's biome to " + sb.charAt(0)
 						+ sb.substring(1).toLowerCase().replace('_', ' '));
 			} catch (IllegalArgumentException ex) {
@@ -78,7 +78,7 @@ public class BiomeCommand implements CommandExecutor {
 
 			BiomePlugin.clearBiomeForChunk(player.getWorld().getName(), player
 					.getLocation().getBlockX() / 16, player.getLocation()
-					.getBlockZ() / 16);
+					.getBlockZ() / 16, player);
 			sender.sendMessage("Set this chunk to use its natural biomes.");
 			return true;
 		} else if (args[0].equals("list")) {
@@ -118,9 +118,11 @@ public class BiomeCommand implements CommandExecutor {
 					sender.sendMessage("This server does not have the WorldEdit plugin installed.");
 					return true;
 				}
-				BiomePlugin.setBiomeForRegion(player.getWorld().getName(),
-						BiomePlugin.getWorldEdit().getSelection(player)
-								.getRegionSelector().getRegion(), biome);
+				BiomePlugin
+						.setBiomeForRegion(player.getWorld().getName(),
+								BiomePlugin.getWorldEdit().getSelection(player)
+										.getRegionSelector().getRegion(),
+								biome, player);
 				sender.sendMessage("Set your selection's biome to "
 						+ sb.charAt(0)
 						+ sb.substring(1).toLowerCase().replace('_', ' '));
@@ -145,7 +147,7 @@ public class BiomeCommand implements CommandExecutor {
 			try {
 				BiomePlugin.clearBiomeForRegion(player.getWorld().getName(),
 						BiomePlugin.getWorldEdit().getSelection(player)
-								.getRegionSelector().getRegion());
+								.getRegionSelector().getRegion(), player);
 				sender.sendMessage("Set your selection to use its natural biomes.");
 			} catch (Exception ex) {
 				sender.sendMessage("You have not defined a selection in WorldEdit.");

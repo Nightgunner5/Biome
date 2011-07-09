@@ -1,8 +1,48 @@
 name: Biome
 main: net.llamaslayers.minecraft.biome.BiomePlugin
-version: 0.3.1
+version: 0.4
 description: Change biomes anywhere in any world.
 load: startup
 commands:
-  biome:
-    usage: /biome <set <type>|get|list|clear|set-selection <type>|clear-selection>
+    biome:
+        usage: /biome <set <type>|get|list|clear|set-selection <type>|clear-selection>
+permissions:
+    biome.*:
+        description: Gives access to all features and no restrictions of Biome.
+        children:
+            biome.set.*: true
+            biome.clear.*: true
+            biome.get: true
+            biome.list: true
+            biome.worldguard: false
+    biome.set.*:
+        description: Gives access to both 
+        children:
+            biome.set.chunk: true
+            biome.set.selection: true
+    biome.clear.*:
+        description:
+        children:
+            biome.clear.chunk: true
+            biome.clear.selection: true
+    biome.get:
+        description: Allows the player to find out what biome they are standing in.
+        default: true
+    biome.list:
+        description: Allows the player to generate a list of biomes that exist in Minecraft.
+        default: true
+    biome.set.chunk:
+        description: Allows the player to set the biome for a chunk (16x16).
+        default: op
+    biome.set.selection:
+        description: Allows the player to set the biome for a WorldGuard selection (any size, can be polygons other than rectangles).
+        default: op
+    biome.clear.chunk:
+        description: Allows the player to unset the biome for a chunk (16x16).
+        default: op
+    biome.clear.selection:
+        description: Allows the player to uset the biome for a WorldGuard selection (any size, can be polygons other than rectangles).
+        default: op
+    biome.worldguard:
+        description: Players with this "permission" will be constrained to their own WorldGuard regions. If WorldGuard is not installed, they will not be able to set or clear biomes at all.
+        default: notop
