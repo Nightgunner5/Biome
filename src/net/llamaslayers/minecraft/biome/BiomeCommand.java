@@ -22,6 +22,16 @@ public class BiomeCommand implements CommandExecutor {
 		if (args.length == 0)
 			return false;
 
+		if (!(((CraftWorld) player.getWorld()).getHandle().worldProvider.b instanceof BiomeChunkManager)) {
+			Class<?> chunkClass = ((CraftWorld) player.getWorld()).getHandle().worldProvider.b
+					.getClass();
+			sender.sendMessage("Please report the following error to the Biome plugin thread: "
+					+ chunkClass.getPackage().getName()
+					+ "."
+					+ chunkClass.getName());
+			return true;
+		}
+
 		if (args[0].equals("get")) {
 			if (args.length != 1)
 				return false;

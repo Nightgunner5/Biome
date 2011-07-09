@@ -61,6 +61,12 @@ public class BiomePlugin extends JavaPlugin {
 		instance = this;
 		getCommand("biome").setExecutor(new BiomeCommand());
 
+		for (World world : getServer().getWorlds()) {
+			((CraftWorld) world).getHandle().worldProvider.b = new BiomeChunkManager(
+					((CraftWorld) world).getHandle(),
+					((CraftWorld) world).getHandle().worldProvider.b);
+		}
+
 		if (getConfiguration().getKeys("gobal_biomes") == null) {
 			getConfiguration().setHeader("# Allowed biomes in this config:",
 					"# " + Arrays.toString(Biome.values()), "");
